@@ -70,11 +70,18 @@ router.post("/books/create", (req, res, next) => {
 
 //UPDATE: display form
 router.get("/books/:bookId/edit", (req, res, next) => {
-  Book.findById(req.params.bookId)
-    .then( (bookDetails) => {
-      res.render("books/book-edit", bookDetails);
+  
+  let authorsArr;
+
+  Author.find()
+  .then((authorsFromDB) => {
+    authorsArr = authorsFromDB;
+    return Book.findById(req.params.bookId)
+  .then((bookDetails) => {
+        res.render("books/book-edit", { bookDetails, authorsArr});
+      });
     })
-    .catch( err => {
+  .catch((err) => {
       console.log("Error getting book details from DB...", err);
       next();
     });
@@ -83,18 +90,21 @@ router.get("/books/:bookId/edit", (req, res, next) => {
 
 //UPDATE: process form
 router.post("/books/:bookId/edit", (req, res, next) => {
-  const bookId = req.params.bookId;
 
-  const newDetails = {
-    title: req.body.title,
-    author: req.body.author,
+  const bookId = req.params.bookId;
+  console.log("book Id...."+ bookId);
+  console.log("re.body.author...."+ req.body.author);
+
+  const newBookDetails = {
+    title: req.body.title,   
     description: req.body.description,
     rating: req.body.rating,
+    author: req.body.author
   }
 
-  Book.findByIdAndUpdate(bookId, newDetails)
+  Book.findByIdAndUpdate(bookId, newBookDetails)
     .then(() => {
-      res.redirect(`/books/${bookId}`);
+      res.redirect("/books");
     })
     .catch(err => {
       console.log("Error updating book...", err);

@@ -1,4 +1,5 @@
 const bcryptjs = require("bcryptjs");
+const mongoose = require("mongoose");
 const User = require("../models/User.model");
 
 const router = require("express").Router();
@@ -15,6 +16,13 @@ router.get("/signup", (req, res, next) => {
 router.post("/signup", (req, res, next) => {
 
     const {email, password} = req.body;
+
+
+    const regex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}/;
+    if (!regex.test(password)) {
+      res.status(400).render('auth/signup', { errorMessage: 'Password needs to have at least 6 chars and must contain at least one number, one lowercase and one uppercase letter.' });
+      return;
+    }
 
     bcryptjs
         .genSalt(saltRounds)
@@ -33,8 +41,13 @@ router.post("/signup", (req, res, next) => {
             res.redirect("/");
         })
         .catch(e => {
-            console.log("error creating user account", e)
-            next(e);
+            if (e instanceof mongoose.Error.ValidationError) {
+                res.status(400).render('auth/signup', { errorMessage: e.message });
+            } else if (e.code === 11000) {
+                res.status(400).render('auth/signup', { errorMessage: "Email already in use" });
+            } else {
+                next(e);
+            }
         });
 });
 
@@ -61,7 +74,7 @@ router.post("/login", (req, res, next) => {
             } else if (bcryptjs.compareSync(password, userFromDB.passwordHash)) {
                 //login sucessful
                 req.session.currentUser = userFromDB;
-                res.render('users/user-profile', { userInSession: req.session.currentUser });
+                res.redirect("/user-profile");
             } else {
                 //login failed
                 res.render('auth/login', { errorMessage: 'Incorrect credentials.' });
@@ -76,8 +89,7 @@ router.post("/login", (req, res, next) => {
 
 //USER-PROFILE
 router.get('/user-profile', (req, res) => {
-    
-    res.render('users/user-profile', { userInSession: req.session.currentUser });
+    res.render('users/user-profile');
 });
 
 
